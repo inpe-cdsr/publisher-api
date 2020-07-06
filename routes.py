@@ -211,7 +211,7 @@ def traverse(basicactivity, dispatcher = None, extension = 'tif'):
 				for levdatum in sorted(levdatums):
 					logging.warning('traverse - levdatum {}'.format(levdatum))
 					blevdatum = os.path.basename(levdatum)
-					level = blevdatum[0:1]
+					level = blevdatum.split('_')[0]
 					if basicactivity['level'] is not None and basicactivity['level'] != level: continue
 					filestructure[basicactivity['sat']][bym][bdrd][bpr][blevdatum] = {}
 					activity['level'] = level
