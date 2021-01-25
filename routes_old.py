@@ -17,7 +17,6 @@ import urllib.request
 from publisher.celery import tasks
 from flask import current_app as app
 import openpyxl
-import smtplib
 """
 #app = Flask(__name__)
 #app.config['PROPAGATE_EXCEPTIONS'] = True
@@ -558,8 +557,6 @@ def xpublish(activity,basicactivity):
 		myfirsttask = False
 	basicactivity['total'] += 1
 	basicactivity['started'] += 1
-	if activity['drd'] not in basicactivity['cq']:
-		basicactivity['cq'].append(activity['drd'])
 	logging.warning('xpublish - calling taskschain {}'.format(basicactivity))
 	if len(mytasks) > 0:
 		taskschain = chain(mytasks)
@@ -581,43 +578,11 @@ def publish():
 	basicactivity['missing'] = 0
 	basicactivity['total'] = 0
 	basicactivity['done'] = 0
-	basicactivity['cq'] = []
 
 	step_start = time.time()
 	basicactivity['start'] = str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(step_start)))
 	logging.warning('publish - calling traverse {}'.format(basicactivity))
 	filestructure = traverse(basicactivity,xpublish)
-	
-# https://www.tutorialspoint.com/python/python_sending_email.htm
-	cqnotify = os.environ.get('CQ_NOTIFY')
-	if cqnotify == 'yes' and len(basicactivity['cq']) > 0:
-		sender = os.environ.get('smtp_USER')
-		receivers = ['cq@inpe.br']
-		receivers = os.environ.get('CQ_RECEIVERS').split(',')
-
-		message = """From: %s
-To: %s
-Subject: Controlar passagens
-
-Controlar passagens:
-""" % (sender, ', '.join(receivers))
-		logging.warning('publish - sendmail {}'.format(message))
-		for drd in basicactivity['cq']:
-			message = message + os.path.basename(drd)+'\n'
-			logging.warning('publish - sendmail {}'.format(message))
-		try:
-		   smtpObj = smtplib.SMTP('smtp1.inpe.br',587)
-		   smtpObj.ehlo()
-		   smtpObj.starttls()
-		   smtpObj.login(sender, os.environ.get('smtp_PASS'))
-		   smtpObj.sendmail(sender, receivers, message)
-		   smtpObj.quit()    
-		   logging.warning('publish - Successfully sent email')
-		   basicactivity['message'] = "Successfully sent email"
-		except Exception as e:
-		   logging.warning('publish - Error: unable to send email {}'.format(e))
-		   basicactivity['message'] = "Error: unable to send email {}".format(e)
-
 	step_end = time.time()
 	elapsedtime = step_end - step_start
 	basicactivity['end'] = str(time.strftime('%Y-%m-%d %H:%M:%S',time.localtime(step_end)))
